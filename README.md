@@ -77,19 +77,26 @@ Write a report that includes:
 6. Results: metrics table and confusion matrices
 7. Discussion: best model, limitations (e.g. self-reported survey data), and ethical note (this is a student project, **not** a clinical diagnostic tool)
 8. Conclusion
-9. Member contributions
+9. Member contributions (3 members: lead/documentation, code part 1, code part 2)
 
-## Suggested work split
-| Member | Task |
-|--------|------|
-| 1 | Sections A–B (load data, EDA) |
-| 2 | Section C (cleaning, feature preparation) |
-| 3 | Sections D–E (split, models) |
-| 4 | Sections F–G (evaluation, visualization) |
-| All | Section H (documentation) and final review |
+## Work split (3 members)
+| Member | Role | Tasks |
+|--------|------|-------|
+| Member 1 (project lead) | Coordination, documentation, review | Section H (write the report), compare the teammates' final code against the reference version, make sure all requirements are met |
+| Member 2 | Code fixer, part 1 | Sections A–C (load data, EDA, cleaning, feature preparation) and Section D (80-20 split with `random_state=42`) |
+| Member 3 | Code fixer, part 2 | Sections E–G (models, confusion matrix and metrics, visualization fixes) |
+
+Members 2 and 3 work in the **same script**. Member 2 finishes Sections A–D first
+and shares the file. Member 3 then builds on it. Agree on the variable names
+(`X_train`, `X_test`, `y_train`, `y_test`) before starting.
+
+Member 1 collects the EDA findings, results and discussion from Members 2 and 3
+for the documentation. Members 2 and 3 should send short notes on what they
+changed and why, as the report needs this.
 
 ## Rules for the team
 - Everyone uses the same dataset file and `random_state=42` so results match.
 - Make sure the final script runs from top to bottom with no errors (Colab: *Runtime → Restart and run all*).
 - Comment your code and explain *why* you made each choice, not just what the code does.
+- Send the final fixed script to Member 1, who will review it before submission.
 - Submit: the final `.py` (or `.ipynb`) file and the documentation.
