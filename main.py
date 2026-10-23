@@ -34,6 +34,7 @@ plt.ylabel('Number of students')
 plt.show()
 
 df.drop(columns=['id', 'Depression']).hist(figsize=(12, 8))
+plt.suptitle('Distribution of each numeric column (y-axis = number of students)')
 plt.tight_layout()
 plt.show()
 
