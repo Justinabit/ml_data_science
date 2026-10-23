@@ -24,7 +24,7 @@ df = df.rename(columns={'Have you ever had suicidal thoughts ?': 'Suicidal Thoug
 # ---------- 2. Exploratory data analysis ----------
 print(df.shape)
 df.info()
-print(df.describe())
+print(df.describe().round(2).T.to_string())   # .T turns the table sideways so it fits
 print("Missing values:\n", df.isna().sum())
 print("Duplicate rows:", df.duplicated().sum())
 print(df['Depression'].value_counts(normalize=True))   # class balance
@@ -59,24 +59,30 @@ for col in ['Academic Pressure', 'Financial Stress', 'Sleep Duration', 'Suicidal
 #   (nearly everyone is a student), and some City values are names or typos.
 
 # ---------- 3. Data cleaning ----------
+# Every step prints how many rows are left, so each deletion can be traced
 print("Rows before cleaning:", len(df))
 
 df = df.drop(columns=['id'])   # only a row number, not a feature
+
 df = df.dropna()               # 3 rows with missing Financial Stress
+print("After removing missing values:", len(df))
 
 # Cities that appear fewer than 100 times are typos or names (e.g. 'Saanvi', '3')
 city_counts = df['City'].value_counts()
 valid_cities = city_counts[city_counts >= 100].index
 df = df[df['City'].isin(valid_cities)]
+print("After removing invalid cities:", len(df))
 
 # 'Others' is an unclear answer for sleep and diet (only 30 rows)
 df = df[df['Sleep Duration'] != 'Others']
 df = df[df['Dietary Habits'] != 'Others']
+print("After removing 'Others' answers:", len(df))
 
 # One value fills more than 99% of these columns, so they cannot help the model
 df = df.drop(columns=['Profession', 'Work Pressure', 'Job Satisfaction'])
 
-print("Rows after cleaning:", len(df))
+print("Shape after cleaning:", df.shape)
+print("Missing values left:", df.isna().sum().sum())
 
 # ---------- 4. Features (X), target (y) and 80-20 split ----------
 X = df.drop(columns=['Depression'])
@@ -91,7 +97,19 @@ cat_cols = X.select_dtypes(exclude='number').columns.tolist()
 print("Numeric features:", num_cols)
 print("Categorical features:", cat_cols)
 
-# ---------- 5. Train and evaluate ----------
+# ---------- 5. Feature check (training data only) ----------
+# Numeric features: correlation with Depression
+corr = X_train[num_cols].corrwith(y_train).sort_values()
+print(corr.round(3))
+corr.plot(kind='barh', title='Correlation with Depression (training data)')
+plt.xlabel('Pearson correlation')
+plt.show()
+
+# Categorical features: % depressed in each group
+for col in cat_cols:
+    print((y_train.groupby(X_train[col]).mean() * 100).round(1), "\n")
+
+# ---------- 6. Train and evaluate ----------
 models = {
     'Baseline (most frequent)': DummyClassifier(strategy='most_frequent'),
     'Logistic regression': LogisticRegression(max_iter=1000, random_state=42),
@@ -99,6 +117,7 @@ models = {
 }
 
 results = []
+fitted = {}   # keep the trained pipelines for the error analysis
 for name, model in models.items():
     # One-hot encode text columns and scale numeric columns. Inside a Pipeline
     # these steps are fitted on the training data only, so no test data leaks in.
@@ -108,6 +127,7 @@ for name, model in models.items():
     ])
     pipe = Pipeline([('prep', preprocess), ('model', model)])
     pipe.fit(X_train, y_train)
+    fitted[name] = pipe
 
     train_pred = pipe.predict(X_train)
     test_pred = pipe.predict(X_test)
@@ -130,7 +150,24 @@ for name, model in models.items():
 
 print(pd.DataFrame(results).round(3).to_string())
 
-# ---------- 6. Limitation check: model without 'Suicidal Thoughts' ----------
+# ---------- 7. Error analysis (logistic regression, test data) ----------
+# Which depressed students does the model miss?
+test_data = X_test.copy()
+test_data['Actual'] = y_test
+test_data['Predicted'] = fitted['Logistic regression'].predict(X_test)
+
+caught = test_data[(test_data['Actual'] == 1) & (test_data['Predicted'] == 1)]
+missed = test_data[(test_data['Actual'] == 1) & (test_data['Predicted'] == 0)]
+false_alarms = test_data[(test_data['Actual'] == 0) & (test_data['Predicted'] == 1)]
+
+for label, group in [('Caught (TP)', caught), ('Missed (FN)', missed),
+                     ('False alarm (FP)', false_alarms)]:
+    print(f"{label}: {len(group)} students | "
+          f"avg Academic Pressure {group['Academic Pressure'].mean():.2f} | "
+          f"avg Financial Stress {group['Financial Stress'].mean():.2f} | "
+          f"suicidal thoughts {(group['Suicidal Thoughts'] == 'Yes').mean() * 100:.0f}%")
+
+# ---------- 8. Limitation check: model without 'Suicidal Thoughts' ----------
 # This question is very close to a symptom of depression. Does the model still
 # work without it?
 cat_cols_no_st = [col for col in cat_cols if col != 'Suicidal Thoughts']

@@ -23,10 +23,10 @@ In Google Colab, upload `depression.csv` and paste `main.py` into a cell (or run
 ## How the code meets the requirements
 | Requirement | Where in `main.py` |
 |-------------|--------------------|
-| 1. Build a learning model on the assigned dataset | Section 5: logistic regression and random forest classifiers |
-| 2. EDA, basic cleaning, feature preparation | Sections 2–3 (EDA, cleaning) and the `Pipeline` in section 5 (encoding and scaling) |
+| 1. Build a learning model on the assigned dataset | Section 6: logistic regression and random forest classifiers |
+| 2. EDA, basic cleaning, feature preparation | Sections 2–3 (EDA, cleaning), Section 5 (feature check) and the `Pipeline` in Section 6 (encoding and scaling) |
 | 3. 80-20 split, `random_state=42` | Section 4: `train_test_split(test_size=0.2, random_state=42, stratify=y)`; every model also uses `random_state=42` |
-| 4. Confusion matrix evaluation | Section 5: a confusion matrix for each model, plus accuracy, precision, recall and F1 |
+| 4. Confusion matrix evaluation | Section 6: a confusion matrix for each model, plus accuracy, precision, recall and F1; Section 7: error analysis |
 | 5. Code and documentation | This repository and the group report |
 
 **Features (13):** Age, Gender, City, Degree, Academic Pressure, CGPA, Study Satisfaction,
