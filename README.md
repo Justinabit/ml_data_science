@@ -1,102 +1,89 @@
 # Depression Prediction – Group Data Science Project
 
-## Project goal
-Build a machine learning model that predicts whether a student is depressed
-(`Depression` = 1) or not (`Depression` = 0) using the survey dataset `depression.csv`.
+Predict whether a student is depressed (`Depression` = 1) or not (`Depression` = 0)
+from the survey answers in `depression.csv`. Because the target is a 0/1 label, this is a
+**supervised binary classification** task.
+
+> This is a student project, **not** a clinical diagnostic tool.
 
 ## Files
 | File | Purpose |
 |------|---------|
-| `depression.csv` | Dataset (27,901 rows, 18 columns) |
-| `datasci.py` | Our original notebook/script (needs fixing) |
-| `datasci_fixed.py` | Reference version of the fixes. Read it for ideas, but do the corrections yourselves and understand each one |
-| `README.md` | This guide |
+| `depression.csv` | Dataset: 27,901 student survey rows, 18 columns |
+| `main.py` | The full ML process: EDA → cleaning → 80-20 split → pipeline → models → confusion matrix |
+| `requirements.txt` | Python packages needed to run the script |
 
-## Course requirements (must all be met)
-1. Build a learning model based on our assigned dataset.
-2. Perform basic exploratory data analysis (EDA), basic data cleaning and feature preparation.
-3. Train with an **80-20 split** using **`random_state=42`** (also use 42 for any model that takes a random_state).
-4. Use a **confusion matrix** to evaluate the model.
-5. Submit **complete documentation** and the **Python code** showing the ML process.
+## How to run
+```bash
+pip install -r requirements.txt
+python main.py          # run from this folder so the relative path to depression.csv works
+```
+In Google Colab, upload `depression.csv` and paste `main.py` into a cell (or run `!python main.py`).
 
-## Main problem in the original code
-`Depression` is a **0/1 label**, so this is a **classification** task. The original code used
-regression models (`LinearRegression`, `RandomForestRegressor`) and regression metrics (MSE, R²).
-That does not fit the problem and must be changed.
+## How the code meets the requirements
+| Requirement | Where in `main.py` |
+|-------------|--------------------|
+| 1. Build a learning model on the assigned dataset | Section 5: logistic regression and random forest classifiers |
+| 2. EDA, basic cleaning, feature preparation | Sections 2–3 (EDA, cleaning) and the `Pipeline` in section 5 (encoding and scaling) |
+| 3. 80-20 split, `random_state=42` | Section 4: `train_test_split(test_size=0.2, random_state=42, stratify=y)`; every model also uses `random_state=42` |
+| 4. Confusion matrix evaluation | Section 5: a confusion matrix for each model, plus accuracy, precision, recall and F1 |
+| 5. Code and documentation | This repository and the group report |
 
-## Tasks to fix (checklist)
+**Features (13):** Age, Gender, City, Degree, Academic Pressure, CGPA, Study Satisfaction,
+Sleep Duration, Dietary Habits, Suicidal Thoughts, Work/Study Hours, Financial Stress,
+Family History of Mental Illness. **Target:** Depression.
 
-### A. Setup
-- [ ] Put `depression.csv` in the same folder as the script and load it with a **relative path**: `pd.read_csv('depression.csv')` (not `'/depression.csv'`).
+## EDA findings
+- Classes are mildly imbalanced: 58.5% depressed and 41.5% not depressed. No duplicate rows were found, and only 3 values are missing (all in `Financial Stress`).
+- Students who reported suicidal thoughts: 79.0% are depressed, compared with 23.2% of those who did not.
+- The share of depressed students rises with academic pressure (86.1% at level 5, compared with 19.4% at level 1) and with financial stress (81.3% at level 5, compared with 31.9% at level 1).
+- Sleeping less than 5 hours: 64.5% are depressed, compared with 50.9% of those sleeping more than 8 hours.
+- `Profession`, `Work Pressure` and `Job Satisfaction` have almost only one value, and some `City` values are names or typos.
 
-### B. Exploratory data analysis (requirement 2)
-- [ ] Show `df.shape`, `df.info()`, `df.describe()`.
-- [ ] Check missing values (`df.isna().sum()`) and duplicate rows (`df.duplicated().sum()`).
-- [ ] Check class balance of `Depression` (`value_counts`) and plot it.
-- [ ] Plot histograms of the numeric columns and bar charts of key categorical columns.
-- [ ] Look at the unique values of `Gender`, `Sleep Duration`, `Dietary Habits`. Note odd categories such as "Others".
-- [ ] Write 3–5 short observations from the EDA for the documentation.
+## Cleaning and feature preparation
+| Step | Rows / columns affected | Why |
+|------|-------------------------|-----|
+| Drop `id` | 1 column | Row identifier only, no information |
+| Drop rows with missing values | 3 rows | Too few to be worth imputing |
+| Drop invalid `City` values (fewer than 100 occurrences) | 26 rows | Entries like "Saanvi", "M.Tech" or "3" are typos or names, not cities |
+| Drop `Others` in Sleep Duration / Dietary Habits | 30 rows | Unclear answer that cannot be placed in a category |
+| Drop `Profession`, `Work Pressure`, `Job Satisfaction` | 3 columns | One value fills more than 99% of rows (almost everyone is a student), so these columns cannot separate the classes |
+| One-hot encode categorical columns, scale numeric columns | — | Done inside a `Pipeline`, so the encoder and scaler are **fitted on the training set only** (no test-data leakage) |
 
-### C. Data cleaning and feature preparation (requirement 2)
-- [ ] Drop the `id` column (it is only an identifier).
-- [ ] Handle missing values. Report how many rows were dropped, or justify any imputation.
-- [ ] Remove the leftover `fillna(0)` step; it does nothing after `dropna()`.
-- [ ] Decide what to do with high-cardinality columns (`City`, `Degree`) and near-constant columns (`Work Pressure`, `Job Satisfaction`). Explain your decision.
-- [ ] Encode categorical columns (one-hot) and scale numeric columns **using a Pipeline / ColumnTransformer**, so preprocessing is fitted on training data only.
-- [ ] Discuss whether to keep `Have you ever had suicidal thoughts ?`. It is very close to a symptom of the target. (Optional: compare results with and without it.)
+That leaves 27,842 rows, split into 22,273 training rows and 5,569 test rows.
 
-### D. Train/test split (requirement 3)
-- [ ] `train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)`
-- [ ] Use `random_state=42` in **every** model that has that parameter.
+## Results (test set)
+| Model | Train accuracy | Test accuracy | Precision | Recall | F1 |
+|-------|---------------:|--------------:|----------:|-------:|---:|
+| Baseline (always "depressed") | 0.586 | 0.586 | 0.586 | 1.000 | 0.739 |
+| **Logistic regression** | 0.849 | **0.851** | **0.862** | 0.889 | **0.875** |
+| Random forest (max_depth=10) | 0.854 | 0.832 | 0.835 | 0.889 | 0.861 |
 
-### E. Models
-- [ ] Replace `LinearRegression` with `LogisticRegression(max_iter=1000)`.
-- [ ] Replace `RandomForestRegressor(max_depth=2)` with `RandomForestClassifier` and a larger depth (e.g. 8–15).
-- [ ] (Optional) Tune hyperparameters with `GridSearchCV` or `RandomizedSearchCV`.
-- [ ] (Optional) Run 5-fold cross-validation for a more reliable score.
+Confusion matrices on the test set (rows = true label, columns = predicted label):
 
-### F. Evaluation (requirement 4)
-- [ ] Plot a **confusion matrix** for each model on the **test set** (`ConfusionMatrixDisplay`).
-- [ ] Report accuracy, precision, recall, F1 and ROC-AUC for train and test sets.
-- [ ] Compare train vs. test scores to check for overfitting.
-- [ ] Explain which model is better and why. Recall matters for depression screening, because missing a depressed student is the costly mistake.
+| Model | True negatives | False positives | False negatives | True positives |
+|-------|---------------:|----------------:|----------------:|---------------:|
+| Baseline | 0 | 2,308 | 0 | 3,261 |
+| Logistic regression | 1,842 | 466 | 362 | 2,899 |
+| Random forest | 1,734 | 574 | 363 | 2,898 |
 
-### G. Visualization fixes
-- [ ] **Do not reuse `x` and `y` as variable names** in the plotting cell. The original code overwrote the feature matrix and the target.
-- [ ] Remove the leftover "Experimental LogS / Predict LogS" scatter plot. It was copied from another tutorial and does not apply here.
-- [ ] Add a feature-importance chart from the random forest (top 15 features).
-- [ ] Call `plt.show()` after each plot.
+- Both models clearly beat the baseline, which simply predicts the majority class.
+- **Logistic regression is the chosen model.** It has the best test accuracy, precision and F1, and its train and test accuracy are almost equal (0.849 vs. 0.851), so it does not overfit. The random forest has the same recall but more false alarms, and it does better on training data than on test data (0.854 vs. 0.832), which is a sign of mild overfitting.
+- Recall matters most here, because missing a depressed student (a false negative) is the costly mistake. Logistic regression misses 362 of the 3,261 depressed students in the test set.
 
-### H. Documentation (requirement 5)
-Write a report that includes:
+## Limitations
+- **Suicidal thoughts are close to a symptom of depression.** Without this feature, logistic regression drops to 0.800 accuracy and 0.851 recall. The model still works, but much of its strength comes from that one question.
+- The data is self-reported survey data and may contain honest mistakes or biased answers. Respondents are almost all students in Indian cities, so the results may not generalise to other groups.
+- The data has no time dimension, so the model shows associations, not causes.
+- The model uses the default 0.5 decision threshold. A screening tool would probably lower it to catch more depressed students, at the cost of more false alarms.
+
+## Report outline (requirement 5)
 1. Introduction and objective
-2. Dataset description (rows, columns, target, class balance)
-3. EDA findings (with charts)
-4. Data cleaning and feature preparation steps, with justification
+2. Dataset description
+3. EDA findings with charts
+4. Cleaning and feature preparation, with justification
 5. Models used and why
 6. Results: metrics table and confusion matrices
-7. Discussion: best model, limitations (e.g. self-reported survey data), and ethical note (this is a student project, **not** a clinical diagnostic tool)
+7. Discussion: best model, limitations, ethical note
 8. Conclusion
-9. Member contributions (3 members: lead/documentation, code part 1, code part 2)
-
-## Work split (3 members)
-| Member | Role | Tasks |
-|--------|------|-------|
-| Member 1 (project lead) | Coordination, documentation, review | Section H (write the report), compare the teammates' final code against the reference version, make sure all requirements are met |
-| Member 2 | Code fixer, part 1 | Sections A–C (load data, EDA, cleaning, feature preparation) and Section D (80-20 split with `random_state=42`) |
-| Member 3 | Code fixer, part 2 | Sections E–G (models, confusion matrix and metrics, visualization fixes) |
-
-Members 2 and 3 work in the **same script**. Member 2 finishes Sections A–D first
-and shares the file. Member 3 then builds on it. Agree on the variable names
-(`X_train`, `X_test`, `y_train`, `y_test`) before starting.
-
-Member 1 collects the EDA findings, results and discussion from Members 2 and 3
-for the documentation. Members 2 and 3 should send short notes on what they
-changed and why, as the report needs this.
-
-## Rules for the team
-- Everyone uses the same dataset file and `random_state=42` so results match.
-- Make sure the final script runs from top to bottom with no errors (Colab: *Runtime → Restart and run all*).
-- Comment your code and explain *why* you made each choice, not just what the code does.
-- Send the final fixed script to Member 1, who will review it before submission.
-- Submit: the final `.py` (or `.ipynb`) file and the documentation.
+9. Member contributions
